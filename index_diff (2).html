@@ -1,0 +1,1055 @@
+--- index.html (原始)
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <title>Приключения Кубика — Игра-платформер</title>
+    <style>
+        /* ============================================ */
+        /* 🎮 Стили игры "Приключения Кубика"          */
+        /* Мобильная браузерная игра для детей 9-12 лет */
+        /* ============================================ */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            touch-action: none; /* Отключаем скролл и зум на мобильных */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            background: #0f172a;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        /* Контейнер игры — занимает весь экран */
+        #game-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Игровой холст */
+        #gameCanvas {
+            flex: 1;
+            display: block;
+            touch-action: none;
+        }
+
+        /* --- Панель управления внизу экрана --- */
+        #controls {
+            width: 100%;
+            height: 140px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            background: linear-gradient(to bottom, #1e293b, #0f172a);
+            touch-action: none;
+        }
+
+        /* Группа кнопок движения (влево/вправо) */
+        .btn-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Кнопки управления — крупные, удобные для пальца */
+        .ctrl-btn {
+            width: 80px;
+            height: 80px;
+            min-width: 64px;
+            min-height: 64px;
+            border-radius: 18px;
+            border: 3px solid rgba(255,255,255,0.3);
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            touch-action: manipulation;
+            transition: transform 0.05s, background-color 0.05s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .ctrl-btn:active, .ctrl-btn.pressed {
+            transform: scale(0.92);
+        }
+
+        /* Кнопка "Влево" */
+        #btn-left {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        #btn-left:active, #btn-left.pressed {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        }
+
+        /* Кнопка "Вправо" */
+        #btn-right {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        #btn-right:active, #btn-right.pressed {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        }
+
+        /* Кнопка "Прыжок" — круглая, зелёная */
+        #btn-jump {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            box-shadow: 0 4px 16px rgba(34, 197, 94, 0.5);
+            border: 3px solid rgba(255,255,255,0.3);
+            font-size: 32px;
+        }
+        #btn-jump:active, #btn-jump.pressed {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+        }
+
+        /* --- Верхний UI (счёт и инструкция) --- */
+        #ui-top {
+            position: absolute;
+            top: 10px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        #score-display {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            padding: 8px 20px;
+            border-radius: 20px;
+            color: #fbbf24;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+
+        /* --- Всплывающая инструкция --- */
+        #instruction {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            border-radius: 16px;
+            padding: 16px 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            text-align: center;
+            z-index: 20;
+            max-width: 320px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        #instruction h3 {
+            font-size: 18px;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+
+        #instruction p {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+
+        #instruction .hint {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 8px;
+        }
+
+        /* --- Оверлей (экраны победы/проигрыша) --- */
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+            animation: fadeIn 0.3s ease;
+        }
+
+        #overlay.visible {
+            display: flex;
+        }
+
+        #overlay-card {
+            background: white;
+            border-radius: 24px;
+            padding: 32px 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 340px;
+            margin: 0 20px;
+        }
+
+        #overlay-emoji {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        #overlay-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        #overlay-subtitle {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+
+        #overlay-stars {
+            font-size: 32px;
+            margin-bottom: 20px;
+        }
+
+        #restart-btn {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 14px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            transition: transform 0.1s;
+        }
+
+        #restart-btn:active {
+            transform: scale(0.95);
+        }
+
+        #restart-btn.win {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        #restart-btn.lose {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+        }
+
+        /* Анимация появления */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-50%) scale(0.95); }
+            to { opacity: 1; transform: translateX(-50%) scale(1); }
+        }
+
+        #overlay.visible {
+            animation: fadeInOverlay 0.3s ease;
+        }
+
+        @keyframes fadeInOverlay {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ============================================ -->
+<!-- 🎮 Разметка игры "Приключения Кубика"       -->
+<!-- ============================================ -->
+<div id="game-wrapper">
+    <!-- Игровой холст (Canvas) -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Счётчик монет -->
+    <div id="ui-top">
+        <div id="score-display">🪙 0 / 3</div>
+    </div>
+
+    <!-- Инструкция (исчезает при первом нажатии) -->
+    <div id="instruction">
+        <h3>🎮 Приключения Кубика!</h3>
+        <p>Собери 3 монеты и дойди до флага 🏁</p>
+        <div class="hint">Нажми кнопки или клавиши ← → ↑</div>
+    </div>
+
+    <!-- Панель управления -->
+    <div id="controls">
+        <div class="btn-group">
+            <button class="ctrl-btn" id="btn-left">◀</button>
+            <button class="ctrl-btn" id="btn-right">▶</button>
+        </div>
+        <button class="ctrl-btn" id="btn-jump">⬆</button>
+    </div>
+
+    <!-- Оверлей (победа / проигрыш) -->
+    <div id="overlay">
+        <div id="overlay-card">
+            <div id="overlay-emoji"></div>
+            <div id="overlay-title"></div>
+            <div id="overlay-subtitle"></div>
+            <div id="overlay-stars"></div>
+            <button id="restart-btn">🔄 Играть снова</button>
+        </div>
+    </div>
+</div>
+
+<!-- Скрытый root для React (не используется в игре) -->
+<div id="root" style="display:none;"></div>
+
+<script type="module" src="/src/main.tsx"></script>
+
+<script>
+// ============================================
+// 🎮 ИГРА-ПЛАТФОРМЕР "ПРИКЛЮЧЕНИЯ КУБИКА"
+// Полностью самодостаточный код на чистом JS
+// Без внешних библиотек и зависимостей
+// ============================================
+
+(function() {
+    'use strict';
+
+    // --- Получаем элементы DOM ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreDisplay = document.getElementById('score-display');
+    const instructionEl = document.getElementById('instruction');
+    const overlayEl = document.getElementById('overlay');
+    const overlayEmoji = document.getElementById('overlay-emoji');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlaySubtitle = document.getElementById('overlay-subtitle');
+    const overlayStars = document.getElementById('overlay-stars');
+    const restartBtn = document.getElementById('restart-btn');
+    const btnLeft = document.getElementById('btn-left');
+    const btnRight = document.getElementById('btn-right');
+    const btnJump = document.getElementById('btn-jump');
+
+    // --- Константы физики ---
+    const GRAVITY = 1400;       // Сила гравитации (пикселей/сек²)
+    const JUMP_FORCE = -580;    // Сила прыжка (отрицательная = вверх)
+    const MOVE_SPEED = 280;     // Скорость движения (пикселей/сек)
+    const PLAYER_SIZE = 38;     // Размер игрока (квадрат)
+    const COIN_RADIUS = 15;     // Радиус монеты
+    const FLAG_WIDTH = 30;      // Ширина флажка
+    const FLAG_HEIGHT = 50;     // Высота флажка
+
+    // --- Состояние игры ---
+    let gameState = {
+        player: null,
+        platforms: [],
+        coins: [],
+        flag: null,
+        score: 0,
+        totalCoins: 3,
+        gameOver: false,
+        gameWon: false,
+        cameraX: 0,
+        time: 0,
+        instructionShown: true
+    };
+
+    // --- Состояние управления ---
+    let keys = {
+        left: false,
+        right: false,
+        jump: false
+    };
+
+    // --- Тайминг игрового цикла ---
+    let lastTimestamp = 0;
+    let animFrameId = null;
+
+    // ============================================
+    // 📐 Адаптация размера холста под экран
+    // ============================================
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight - 140; // Место для кнопок
+    }
+
+    // ============================================
+    // 🗺️ Создание уровня
+    // ============================================
+    function createLevel() {
+        const cw = canvas.width;
+        const ch = canvas.height;
+
+        // Масштаб уровня под размер экрана
+        const scale = Math.min(cw / 420, ch / 500, 1.5);
+
+        // Позиция земли
+        const groundY = ch - 40;
+
+        // --- Платформы (7 штук) ---
+        const platforms = [
+            // Стартовая площадка (земля)
+            { x: 0, y: groundY, width: 180 * scale, height: 22, color: '#4ade80' },
+            // Платформа 1 — первая ступенька
+            { x: 160 * scale, y: groundY - 70 * scale, width: 110 * scale, height: 16, color: '#60a5fa' },
+            // Платформа 2 — средняя
+            { x: 310 * scale, y: groundY - 140 * scale, width: 100 * scale, height: 16, color: '#f472b6' },
+            // Платформа 3 — правая нижняя
+            { x: 450 * scale, y: groundY - 90 * scale, width: 120 * scale, height: 16, color: '#a78bfa' },
+            // Платформа 4 — высокая бонусная
+            { x: 360 * scale, y: groundY - 230 * scale, width: 90 * scale, height: 16, color: '#fbbf24' },
+            // Платформа 5 — верхняя правая
+            { x: 560 * scale, y: groundY - 190 * scale, width: 110 * scale, height: 16, color: '#fb923c' },
+            // Платформа 6 — финишная
+            { x: 700 * scale, y: groundY - 140 * scale, width: 140 * scale, height: 16, color: '#34d399' },
+        ];
+
+        // --- Монеты (3 штуки) ---
+        const coins = [
+            { x: 210 * scale, y: groundY - 110 * scale, collected: false, animOffset: 0 },
+            { x: 400 * scale, y: groundY - 270 * scale, collected: false, animOffset: 2.1 },
+            { x: 610 * scale, y: groundY - 230 * scale, collected: false, animOffset: 4.2 },
+        ];
+
+        // --- Финишный флаг ---
+        const flag = {
+            x: 755 * scale,
+            y: groundY - 140 * scale - FLAG_HEIGHT
+        };
+
+        // --- Игрок ---
+        const player = {
+            x: 40,
+            y: groundY - PLAYER_SIZE - 5,
+            vx: 0,
+            vy: 0,
+            onGround: false,
+            facingRight: true
+        };
+
+        // Обновляем состояние игры
+        gameState.player = player;
+        gameState.platforms = platforms;
+        gameState.coins = coins;
+        gameState.flag = flag;
+        gameState.score = 0;
+        gameState.gameOver = false;
+        gameState.gameWon = false;
+        gameState.cameraX = 0;
+        gameState.time = 0;
+        gameState.instructionShown = true;
+
+        // Обновляем UI
+        updateScoreUI();
+        instructionEl.style.display = 'block';
+        overlayEl.classList.remove('visible');
+    }
+
+    // ============================================
+    // 🔄 Обновление UI
+    // ============================================
+    function updateScoreUI() {
+        scoreDisplay.textContent = '🪙 ' + gameState.score + ' / ' + gameState.totalCoins;
+    }
+
+    // ============================================
+    // 🎯 Обновление физики (с delta time)
+    // ============================================
+    function update(dt) {
+        // Если игра окончена — не обновляем
+        if (gameState.gameOver || gameState.gameWon) return;
+
+        const player = gameState.player;
+        const platforms = gameState.platforms;
+        const coins = gameState.coins;
+        const flag = gameState.flag;
+
+        // --- Горизонтальное движение ---
+        if (keys.left) {
+            player.vx = -MOVE_SPEED;
+            player.facingRight = false;
+        } else if (keys.right) {
+            player.vx = MOVE_SPEED;
+            player.facingRight = true;
+        } else {
+            // Плавная остановка
+            player.vx *= 0.85;
+            if (Math.abs(player.vx) < 5) player.vx = 0;
+        }
+
+        // --- Прыжок (только если на земле) ---
+        if (keys.jump && player.onGround) {
+            player.vy = JUMP_FORCE;
+            player.onGround = false;
+        }
+
+        // --- Гравитация ---
+        player.vy += GRAVITY * dt;
+
+        // --- Обновление позиции ---
+        player.x += player.vx * dt;
+        player.y += player.vy * dt;
+
+        // --- Столкновения с платформами ---
+        player.onGround = false;
+
+        for (let i = 0; i < platforms.length; i++) {
+            const plat = platforms[i];
+            const playerRight = player.x + PLAYER_SIZE;
+            const playerBottom = player.y + PLAYER_SIZE;
+            const platRight = plat.x + plat.width;
+            const platBottom = plat.y + plat.height;
+
+            // Проверяем пересечение по горизонтали
+            if (playerRight > plat.x && player.x < platRight) {
+                // Приземление сверху
+                if (playerBottom >= plat.y && playerBottom <= plat.y + plat.height + 15 && player.vy >= 0) {
+                    player.y = plat.y - PLAYER_SIZE;
+                    player.vy = 0;
+                    player.onGround = true;
+                }
+            }
+        }
+
+        // --- Проверка падения в пропасть ---
+        if (player.y > canvas.height + 100) {
+            gameState.gameOver = true;
+            showOverlay(false);
+            return;
+        }
+
+        // --- Не даём уйти за левый край ---
+        if (player.x < 0) player.x = 0;
+
+        // --- Сбор монет ---
+        for (let i = 0; i < coins.length; i++) {
+            const coin = coins[i];
+            if (coin.collected) continue;
+
+            const dx = (player.x + PLAYER_SIZE / 2) - coin.x;
+            const dy = (player.y + PLAYER_SIZE / 2) - coin.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < COIN_RADIUS + PLAYER_SIZE / 2 - 4) {
+                coin.collected = true;
+                gameState.score++;
+                updateScoreUI();
+            }
+        }
+
+        // --- Проверка финиша ---
+        if (gameState.score >= gameState.totalCoins) {
+            const flagCX = flag.x + FLAG_WIDTH / 2;
+            const flagCY = flag.y + FLAG_HEIGHT / 2;
+            const dx = (player.x + PLAYER_SIZE / 2) - flagCX;
+            const dy = (player.y + PLAYER_SIZE / 2) - flagCY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < PLAYER_SIZE + 10) {
+                gameState.gameWon = true;
+                showOverlay(true);
+            }
+        }
+
+        // --- Камера (плавно следует за игроком) ---
+        const targetCamX = player.x - canvas.width / 3;
+        gameState.cameraX += (targetCamX - gameState.cameraX) * 4 * dt;
+        if (gameState.cameraX < 0) gameState.cameraX = 0;
+    }
+
+    // ============================================
+    // 🎨 Отрисовка кадра
+    // ============================================
+    function draw() {
+        const cw = canvas.width;
+        const ch = canvas.height;
+        const { player, platforms, coins, flag, cameraX } = gameState;
+
+        // --- Фон: градиентное небо ---
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, ch);
+        skyGrad.addColorStop(0, '#60a5fa');
+        skyGrad.addColorStop(0.5, '#93c5fd');
+        skyGrad.addColorStop(1, '#bbf7d0');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, cw, ch);
+
+        // --- Облака (декоративные, двигаются) ---
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        const cloudTime = gameState.time * 12;
+        for (let i = 0; i < 5; i++) {
+            const cx = ((i * 200 + cloudTime) % (cw + 300)) - 150;
+            const cy = 30 + i * 35 + Math.sin(i * 1.5) * 20;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, 55, 22, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(cx + 35, cy - 8, 35, 18, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(cx - 30, cy + 5, 30, 15, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // --- Солнышко ---
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(cw - 60, 50, 30, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.3)';
+        ctx.beginPath();
+        ctx.arc(cw - 60, 50, 45, 0, Math.PI * 2);
+        ctx.fill();
+
+        // --- Применяем камеру ---
+        ctx.save();
+        ctx.translate(-cameraX, 0);
+
+        // --- Отрисовка платформ ---
+        for (let i = 0; i < platforms.length; i++) {
+            const plat = platforms[i];
+
+            // Тень
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            roundRect(ctx, plat.x + 3, plat.y + 4, plat.width, plat.height, 6);
+            ctx.fill();
+
+            // Основная платформа
+            ctx.fillStyle = plat.color;
+            roundRect(ctx, plat.x, plat.y, plat.width, plat.height, 6);
+            ctx.fill();
+
+            // Блик сверху
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+            roundRect(ctx, plat.x + 2, plat.y + 1, plat.width - 4, 5, 3);
+            ctx.fill();
+
+            // Рамка
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.lineWidth = 1.5;
+            roundRect(ctx, plat.x, plat.y, plat.width, plat.height, 6);
+            ctx.stroke();
+        }
+
+        // --- Отрисовка монет ---
+        for (let i = 0; i < coins.length; i++) {
+            const coin = coins[i];
+            if (coin.collected) continue;
+
+            // Анимация покачивания
+            const bounce = Math.sin(gameState.time * 3 + coin.animOffset) * 5;
+
+            // Свечение
+            ctx.fillStyle = 'rgba(255, 215, 0, 0.25)';
+            ctx.beginPath();
+            ctx.arc(coin.x, coin.y + bounce, COIN_RADIUS + 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Монета (золотой круг)
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(coin.x, coin.y + bounce, COIN_RADIUS, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Блик
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.beginPath();
+            ctx.arc(coin.x - 4, coin.y + bounce - 4, COIN_RADIUS * 0.35, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Рамка
+            ctx.strokeStyle = '#DAA520';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(coin.x, coin.y + bounce, COIN_RADIUS, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Символ на монете
+            ctx.fillStyle = '#B8860B';
+            ctx.font = 'bold ' + (COIN_RADIUS * 0.9) + 'px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('★', coin.x, coin.y + bounce + 1);
+        }
+
+        // --- Отрисовка флага ---
+        // Шест
+        ctx.fillStyle = '#92400e';
+        ctx.fillRect(flag.x, flag.y, 5, FLAG_HEIGHT + 5);
+
+        // Шарик на верхушке
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(flag.x + 2.5, flag.y - 3, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Флажок (зелёный треугольник)
+        ctx.fillStyle = '#22c55e';
+        ctx.beginPath();
+        ctx.moveTo(flag.x + 5, flag.y);
+        ctx.lineTo(flag.x + 5 + FLAG_WIDTH, flag.y + 15);
+        ctx.lineTo(flag.x + 5, flag.y + 30);
+        ctx.closePath();
+        ctx.fill();
+
+        // Блик на флаге
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.beginPath();
+        ctx.moveTo(flag.x + 5, flag.y);
+        ctx.lineTo(flag.x + 5 + FLAG_WIDTH * 0.5, flag.y + 8);
+        ctx.lineTo(flag.x + 5, flag.y + 15);
+        ctx.closePath();
+        ctx.fill();
+
+        // Если все монеты собраны — звёздочка на флаге
+        if (gameState.score >= gameState.totalCoins) {
+            ctx.fillStyle = '#FFD700';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('⭐', flag.x + 18, flag.y + 18);
+        }
+
+        // --- Отрисовка игрока (Кубик с глазами) ---
+        const px = player.x;
+        const py = player.y;
+
+        // Тень под игроком
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        ctx.beginPath();
+        ctx.ellipse(px + PLAYER_SIZE / 2, py + PLAYER_SIZE + 4, PLAYER_SIZE / 2.5, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Тело (синий квадрат с закруглёнными углами)
+        ctx.fillStyle = '#3b82f6';
+        roundRect(ctx, px, py, PLAYER_SIZE, PLAYER_SIZE, 7);
+        ctx.fill();
+
+        // Блик на теле
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        roundRect(ctx, px + 3, py + 3, PLAYER_SIZE - 6, PLAYER_SIZE / 3, 4);
+        ctx.fill();
+
+        // Рамка тела
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, px, py, PLAYER_SIZE, PLAYER_SIZE, 7);
+        ctx.stroke();
+
+        // --- Глаза ---
+        const eyeY = py + PLAYER_SIZE * 0.38;
+        const eyeSize = 6;
+        const lookDir = player.facingRight ? 2 : -2;
+
+        // Белки
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(px + PLAYER_SIZE * 0.33, eyeY, eyeSize, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(px + PLAYER_SIZE * 0.67, eyeY, eyeSize, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Зрачки
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.arc(px + PLAYER_SIZE * 0.33 + lookDir, eyeY, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(px + PLAYER_SIZE * 0.67 + lookDir, eyeY, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Блик в глазах
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.beginPath();
+        ctx.arc(px + PLAYER_SIZE * 0.33 + lookDir - 1, eyeY - 1.5, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(px + PLAYER_SIZE * 0.67 + lookDir - 1, eyeY - 1.5, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Улыбка
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(px + PLAYER_SIZE / 2, py + PLAYER_SIZE * 0.62, 7, 0.15 * Math.PI, 0.85 * Math.PI);
+        ctx.stroke();
+
+        // Щёчки (румянец)
+        ctx.fillStyle = 'rgba(244, 114, 182, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(px + PLAYER_SIZE * 0.18, py + PLAYER_SIZE * 0.55, 4, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(px + PLAYER_SIZE * 0.82, py + PLAYER_SIZE * 0.55, 4, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    // ============================================
+    // 🔧 Вспомогательная функция: скруглённый прямоугольник
+    // ============================================
+    function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+    }
+
+    // ============================================
+    // 📱 Показать экран завершения
+    // ============================================
+    function showOverlay(won) {
+        overlayEl.classList.add('visible');
+
+        if (won) {
+            overlayEmoji.textContent = '🎉';
+            overlayTitle.textContent = 'Уровень пройден!';
+            overlaySubtitle.textContent = 'Ты собрал все монеты! Молодец!';
+            overlayStars.textContent = '⭐⭐⭐';
+            restartBtn.className = 'win';
+        } else {
+            overlayEmoji.textContent = '😅';
+            overlayTitle.textContent = 'Упс! Попробуй снова';
+            overlaySubtitle.textContent = 'Не падай в пропасть!';
+            overlayStars.textContent = '';
+            restartBtn.className = 'lose';
+        }
+    }
+
+    // ============================================
+    // 🔄 Перезапуск игры
+    // ============================================
+    function restartGame() {
+        createLevel();
+        lastTimestamp = 0;
+    }
+
+    restartBtn.addEventListener('click', restartGame);
+    restartBtn.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        restartGame();
+    });
+
+    // ============================================
+    // 🎮 Главный игровой цикл (с delta time)
+    // ============================================
+    function gameLoop(timestamp) {
+        // Вычисляем delta time в секундах
+        if (!lastTimestamp) lastTimestamp = timestamp;
+        let dt = (timestamp - lastTimestamp) / 1000;
+        lastTimestamp = timestamp;
+
+        // Ограничиваем dt (чтобы не было скачков при переключении вкладок)
+        if (dt > 0.05) dt = 0.05;
+
+        // Обновляем время для анимаций
+        gameState.time += dt;
+
+        // Обновляем физику
+        update(dt);
+
+        // Рисуем кадр
+        draw();
+
+        // Запрашиваем следующий кадр
+        animFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    // ============================================
+    // ⌨️ Управление с клавиатуры (для компьютера)
+    // ============================================
+    window.addEventListener('keydown', function(e) {
+        // Скрываем инструкцию при первом нажатии
+        if (gameState.instructionShown) {
+            gameState.instructionShown = false;
+            instructionEl.style.display = 'none';
+        }
+
+        switch (e.code) {
+            case 'ArrowLeft':
+            case 'KeyA':
+                keys.left = true;
+                e.preventDefault();
+                break;
+            case 'ArrowRight':
+            case 'KeyD':
+                keys.right = true;
+                e.preventDefault();
+                break;
+            case 'Space':
+            case 'ArrowUp':
+            case 'KeyW':
+                keys.jump = true;
+                e.preventDefault();
+                break;
+        }
+    });
+
+    window.addEventListener('keyup', function(e) {
+        switch (e.code) {
+            case 'ArrowLeft':
+            case 'KeyA':
+                keys.left = false;
+                break;
+            case 'ArrowRight':
+            case 'KeyD':
+                keys.right = false;
+                break;
+            case 'Space':
+            case 'ArrowUp':
+            case 'KeyW':
+                keys.jump = false;
+                break;
+        }
+    });
+
+    // ============================================
+    // 📱 Управление сенсорными кнопками
+    // ============================================
+
+    // Универсальная настройка кнопки
+    function setupButton(btn, action) {
+        // Touch-события (мобильные)
+        btn.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            keys[action] = true;
+            btn.classList.add('pressed');
+            if (gameState.instructionShown) {
+                gameState.instructionShown = false;
+                instructionEl.style.display = 'none';
+            }
+        }, { passive: false });
+
+        btn.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            keys[action] = false;
+            btn.classList.remove('pressed');
+        }, { passive: false });
+
+        btn.addEventListener('touchcancel', function(e) {
+            e.preventDefault();
+            keys[action] = false;
+            btn.classList.remove('pressed');
+        }, { passive: false });
+
+        // Mouse-события (для тестирования на ПК)
+        btn.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            keys[action] = true;
+            btn.classList.add('pressed');
+            if (gameState.instructionShown) {
+                gameState.instructionShown = false;
+                instructionEl.style.display = 'none';
+            }
+        });
+
+        btn.addEventListener('mouseup', function(e) {
+            e.preventDefault();
+            keys[action] = false;
+            btn.classList.remove('pressed');
+        });
+
+        btn.addEventListener('mouseleave', function(e) {
+            keys[action] = false;
+            btn.classList.remove('pressed');
+        });
+
+        // Отключаем контекстное меню
+        btn.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+    }
+
+    // Настраиваем кнопки
+    setupButton(btnLeft, 'left');
+    setupButton(btnRight, 'right');
+    setupButton(btnJump, 'jump');
+
+    // Отключаем контекстное меню на canvas
+    canvas.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+    });
+
+    // ============================================
+    // 🚀 Запуск игры
+    // ============================================
+
+    // Адаптируем размер холста
+    resizeCanvas();
+    window.addEventListener('resize', function() {
+        resizeCanvas();
+        createLevel(); // Пересоздаём уровень при изменении размера
+    });
+
+    // Создаём уровень и запускаем игровой цикл
+    createLevel();
+    animFrameId = requestAnimationFrame(gameLoop);
+
+})();
+</script>
+
+</body>
+</html>
+
+
++++ index.html (修改后)
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <title>Приключения Кубика — Игра-платформер</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body, #root {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        touch-action: none;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      body {
+        background: #0f172a;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
